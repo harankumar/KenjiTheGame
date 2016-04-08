@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kenji: The Game | A Super Cool Physics Site</title>
+</head>
+<body style="overflow: hidden;">
+<canvas id="canvas" height="800" width="1000">
+
+</canvas>
+
+<div id="controls">
+    <!--TODO-->
+</div>
+
+<div id="physstuff" style="position: fixed; right: 80px; top: 25px">
+    <div style="text-decoration: underline">Stats for Nerds</div>
+    <br>
+    <div>
+        <b>Level:</b> <span id="level">0</span>
+    </div>
+    <div>
+        <b>Framerate:</b> <span id="fr">0</span>fps
+    </div>
+    <br>
+    <div>
+        <b>Position: </b> (<span id="x">0</span>m, <span id="y">0</span>m)
+    </div>
+    <div>
+        <b>Mass:</b> <span id="mass">100</span>kg
+    </div>
+    <div>
+        <b>Radius:</b> <span id="radius">30</span>m
+    </div>
+    <div>
+        <b>X-Velocity:</b> <span id="xvelocity">0</span>m/s
+    </div>
+    <div>
+        <b>Y-Velocity:</b> <span id="yvelocity">0</span>m/s
+    </div>
+    <div>
+        <b> X-Acceleration:</b> <span id="xacceleration">0</span>m/s^2
+    </div>
+    <div>
+        <b> Y-Acceleration:</b> <span id="yacceleration">0</span>m/s^2
+    </div>
+    <div>
+        <b> X-Force:</b> <span id="xforce">0</span>N
+    </div>
+    <div>
+        <b> Y-Force:</b> <span id="yforce">0</span>N
+    </div>
+    <div>
+        <b> Potential Energy:</b> <span id="pe">0</span>MJ
+    </div>
+    <div>
+        <b> X-Kinetic Energy:</b> <span id="xke">0</span>MJ
+    </div>
+    <div>
+        <b> Y-Kinetic Energy:</b> <span id="yke">0</span>MJ
+    </div>
+    <div>
+        <b> Work:</b> <span id="work">0</span>MJ
+    </div>
+    <div>
+        <b> Total Work:</b> <span id="totalwork">0</span>MJ
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/EaselJS/0.8.0/easeljs.min.js">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/store.js/1.3.20/store.min.js"></script>
+<script src="http://code.jquery.com/jquery-2.2.3.min.js" integrity="sha256-a23g1Nt4dtEYOj7bR+vTu7+T8VP13humZFBJNIYoEJo="
+        crossorigin="anonymous"></script>
+
+<script>
+    // All units, if not otherwise specified, are in the KMS system
+
+    var COLLPCT = 1;
+    var FORCE_AMT = 1000;
+
+    var level = 0;
+    var started = false;
+    var framerate = 0;
+    var paused = true;
+    var levelingup = false;
+    var gameover = false;
+    var adityas = [];
+
+    var target_x = 50;
+    var target_y = 50;
+    var target_r = 100;
+
+
+    var r = 30;
+    var m = 100;
+
+    var x = 50;
+    var y = 500;
+    var v_x = 0;
+    var v_y = 0;
+    var a_x = 0;
+    var a_y = 0;
+
+    var f_x = 0;
+    var f_y = -9.8 * m;
+
+    var ke_x = 0;
+    var ke_y = 0;
+    var pe_i = 0;
+    var pe_f = 0;
+    var work = 0;
+    var total_work = 0;
+
+    // TODO: score tracking
+
+    function round(num) {
+        return Math.round(num * 100) / 100;
+    }
+
+    function update() {
+        $('#level').text(level);
+        $('#fr').text(round(framerate));
+
+        $('#x').text(round(x));
+        $('#y').text(round(y));
+        $('#mass').text(round(m));
+        $('#radius').text(round(r));
+        $('#xvelocity').text(round(v_x));
+        $('#yvelocity').text(round(v_y));
+        $('#xacceleration').text(round(a_x));
+        $('#yacceleration').text(round(a_y));
+        $('#xforce').text(round(f_x));
+        $('#yforce').text(round(f_y));
+        $('#pe').text(round(pe_f / 1000000));
+        $('#xke').text(round(ke_x / 1000000));
+        $('#yke').text(round(ke_y / 1000000));
+        $('#work').text(round(work / 1000000));
+        $('#totalwork').text(round(total_work / 1000000));
+    }
+
+    var stage = new createjs.Stage("canvas");
+
+    levelstart();
+
+    var prevTime = Date.now();
+
+    function dist() {
+        return Math.pow(x - target_x, 2) + Math.pow(y - target_y, 2);
+    }
+
+    function makeCircle(x, y, r, fill, stroke, width) {
+        var g = new createjs.Graphics();
+        g.setStrokeStyle(1);
+        g.beginStroke(stroke);
+        g.beginFill(fill);
+        g.drawCircle(0, 0, r);
+
+        var s = new createjs.Shape(g);
+        s.x = x;
+        s.y = y;
+
+        stage.addChild(s);
+        stage.update();
+    }
+
+    function makeText(x, y, text, font, color) {
+        var t = new createjs.Text(text, font, color);
+        t.x = x;
+        t.y = y;
+        t.textAlign = "center";
+        stage.addChild(t);
+        stage.update();
+    }
+
+    var overlaycolor = "#CCC";
+
+    function makeOverlay() {
+        var g = new createjs.Graphics();
+        g.setStrokeStyle(1);
+        g.beginFill(overlaycolor);
+        g.drawRect(0, 0, 1000, 1000);
+
+        var s = new createjs.Shape(g);
+        s.x = 0;
+        s.y = 0;
+        s.alpha = 0.5;
+
+        stage.addChild(s);
+        stage.update();
+    }
+
+    function drawScreen() {
+        stage.removeAllChildren();
+        if (levelingup) {
+            makeCircle(target_x, 800 - target_y, target_r - 3, 'lightgreen', 'darkgreen', 3);
+        } else {
+            makeCircle(target_x, 800 - target_y, target_r - 3, 'lightgrey', 'darkgrey', 3);
+        }
+        var bm = new createjs.Bitmap("wilkerino.png");
+        bm.alpha = 0.5;
+        bm.x = target_x - target_r;
+        bm.y = 800 - target_y - target_r;
+        bm.scaleX = target_r / 100 * 1.9;
+        bm.scaleY = target_r / 100 * 1.9;
+        stage.addChild(bm);
+        stage.update();
+
+        for (var i = 0; i < adityas.length; i++) {
+            var a = adityas[i];
+            makeCircle(a.x, 800 - a.y, a.r, "#000", "#000", 5);
+
+            let bm = new createjs.Bitmap("adicha.png");
+            bm.alpha = 0.8;
+            bm.x = a.x - a.r;
+            bm.y = 800 - a.y - a.r;
+            bm.scaleX = a.r / 100 * 2;
+            bm.scaleY = a.r / 100 * 2;
+            stage.addChild(bm);
+            stage.update();
+
+        }
+
+        makeCircle(x, 800 - y, r, "#FFFF00", "#F0F000", 5);
+
+        var bm = new createjs.Bitmap("kennyrino.png");
+        bm.alpha = 0.8;
+        bm.x = x - r;
+        bm.y = 800 - y - r;
+        bm.scaleX = r / 100 * 2;
+        bm.scaleY = r / 100 * 2;
+        stage.addChild(bm);
+        stage.update();
+    }
+
+    function levelover() {
+        paused = true;
+        levelingup = true;
+        f_x = 0;
+        f_y = -9.8 * m;
+        total_work += work;
+    }
+
+    function endgame() {
+        console.log("adicha");
+        paused = true;
+        gameover = true;
+
+        f_x = 0;
+        f_y = -9.8 * m;
+
+        overlaycolor = "red";
+
+        if (store.enabled) {
+            if (!store.get("hslevel") || store.get("hslevel") < level) {
+                store.set("hslevel", level);
+                store.set("hswork", round(total_work/ 1000000));
+            } else if (store.get("hslevel") == level) {
+                if (store.get("hswork") > total_work)
+                    store.set("hswork", round(total_work / 1000000));
+            }
+        }
+    }
+
+    function levelstart() {
+        level++;
+        r = (Math.random() * 0.1 + 1) * 2 * Math.pow(level + 1, 1.01) + 10;
+        x = Math.random() * 900 + 50; // Diff coords
+        y = Math.random() * (400 - 2 * r) + r + 300;
+        m = (Math.random() * 0.75 + 0.25) * 5 * level;
+        v_x = 0;
+        v_y = 0;
+        a_x = 0;
+        a_y = 0;
+        f_x = 0;
+        f_y = -9.8 * m;
+
+        ke_x = 0;
+        ke_y = 0;
+        pe_f = 0;
+        work = 0;
+        pe_i = m * 9.8 * y;
+
+        do {
+            target_r = (Math.random() * 0.1 + 1) * 2 * Math.pow(50 - level, 1.1) + 10;
+            target_x = Math.random() * (1000 - 2 * target_r) + target_r;
+            target_y = Math.random() * (400 - 2 * target_r) + target_r;
+        } while (dist() + 10 < Math.pow(target_r + r, 2));
+
+        var numadityas = level / 12;
+        adityas = [];
+        for (var i = 0; i < numadityas; i++) {
+            let ax, ay, ar;
+            do {
+                ax = Math.random() * 1000;
+                ay = Math.random() * 800;
+                ar = 20;
+            } while (Math.pow(x - ax, 2) + Math.pow(y - ay, 2) + 10 < Math.pow(ar + r, 2));
+            adityas.push({x: ax, y: ay, r: ar});
+        }
+
+        levelingup = false;
+    }
+
+    document.addEventListener('keypress', function (e) {
+        if (e.keyCode == 32) {
+            if (gameover)
+                return;
+            paused = !paused;
+            started = true;
+            if (levelingup)
+                levelstart();
+        }
+    });
+    var keydown = {};
+    document.addEventListener('keydown', function (e) {
+        if (keydown[e.keyCode])
+            return;
+        keydown[e.keyCode] = true;
+        if (paused || gameover)
+            return;
+        if (e.keyCode == 38)
+            f_y += FORCE_AMT;
+        if (e.keyCode == 40)
+            f_y -= FORCE_AMT;
+        if (e.keyCode == 37)
+            f_x -= FORCE_AMT;
+        if (e.keyCode == 39)
+            f_x += FORCE_AMT;
+    });
+    document.addEventListener('keyup', function (e) {
+        keydown[e.keyCode] = false;
+        if (paused)
+            return;
+        if (e.keyCode == 38)
+            f_y -= FORCE_AMT;
+        if (e.keyCode == 40)
+            f_y += FORCE_AMT;
+        if (e.keyCode == 37)
+            f_x += FORCE_AMT;
+        if (e.keyCode == 39)
+            f_x -= FORCE_AMT;
+    });
+    //    two.bind("update", function (frameCount) { // TODO: display frame rate
+    createjs.Ticker.addEventListener("tick", function () {
+        var currTime = Date.now();
+
+        if (paused) {
+            drawScreen();
+            makeOverlay();
+
+            if (gameover) {
+                makeText(500, 350, "Game Over! \n Press F5 to Restart", "bold 50px Arial", "#000");
+                if (store.enabled) {
+                    var hslevel = store.get("hslevel") || "???";
+                    var hswork = store.get("hswork") || "???";
+                    makeText(500, 500, "You reached level " + level + " using " + round(total_work / 1000000) + "MJ work\n" +
+                            "Your high score is level " + hslevel + " using " + hswork + "MJ work", "bold 30px Arial", "#000");
+                }
+
+            } else if (!levelingup) {
+                prevTime = currTime;
+                if (started)
+                    makeText(500, 400, "Press SPACE \nto Resume", "bold 50px Arial", "#000");
+                else
+                    makeText(500, 375, "Welcome to Ideal Physics Land!\n" +
+                            "Help Kenji turn in his Physics HW while minimizing the work he must do\n" +
+                            " Avoid Adityas - they'll steal the homework! " +
+                            "\nPress SPACE to Begin", "bold 25px Arial", "#000");
+                return;
+            } else {
+                makeText(500, 400, "Press SPACE \nto Continue", "bold 50px Arial", "#000")
+            }
+        }
+
+        var t = (currTime - prevTime) / 1000;
+        prevTime = currTime;
+
+        framerate = 1.0 / t;
+        a_x = f_x / m;
+        a_y = f_y / m;
+        v_x += a_x;
+        v_y += a_y;
+        x += v_x * t;
+        y += v_y * t;
+
+        ke_x = m * v_x * v_x * 0.5;
+        ke_y = m * v_y * v_y * 0.5;
+        pe_f = m * 9.8 * y;
+        work = ke_x + ke_y;
+
+        update();
+
+        // Check for collision with walls
+        // TODO: inelastic vs elastic
+        if (x - r <= 0) {
+            v_x *= -1 * COLLPCT; // This is a pretty hacky approximation of a collision ¯\_(ツ)_/¯
+            x = r;
+        }
+        if (y - r <= 0) {
+            v_y *= -1 * COLLPCT;
+            y = r;
+        }
+        if (x + r >= 1000) {
+            v_x *= -1 * COLLPCT;
+            x = 1000 - r;
+        }
+        if (y + r >= 800) {
+            v_y *= -1 * COLLPCT;
+            y = 800 - r;
+        }
+
+        if (levelingup || gameover)
+            return;
+
+        drawScreen();
+
+        // check if in target
+        if (dist() <= Math.pow(target_r + r, 2)) {
+            // if in target light up target, pause, and level over
+            levelover();
+        }
+
+        // check if in aditya
+        for (var i = 0; i < adityas.length; i++) {
+            var a = adityas[i];
+            if (Math.pow(x - a.x, 2) + Math.pow(y - a.y, 2) <= Math.pow(a.r + r, 2))
+                endgame();
+        }
+        // if in aditya, light up aditya, display game over screen, reset
+
+    });
+</script>
+</body>
+</html>
