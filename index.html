@@ -354,7 +354,7 @@
         if (e.keyCode == 39)
             f_x -= FORCE_AMT;
     });
-    //    two.bind("update", function (frameCount) { // TODO: display frame rate
+    createjs.Ticker.setFPS(120);
     createjs.Ticker.addEventListener("tick", function () {
         var currTime = Date.now();
 
@@ -444,7 +444,7 @@
         }
         // if in aditya, light up aditya, display game over screen, reset
 
-    });
+    }).setFPS(60);
 </script>
 </body>
 </html>
