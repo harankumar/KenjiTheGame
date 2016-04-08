@@ -329,9 +329,9 @@
     document.addEventListener('keydown', function (e) {
         if (keydown[e.keyCode])
             return;
-        keydown[e.keyCode] = true;
-        if (paused || gameover)
+        if (paused || gameover || levelingup)
             return;
+        keydown[e.keyCode] = true;
         if (e.keyCode == 38)
             f_y += FORCE_AMT;
         if (e.keyCode == 40)
@@ -342,9 +342,9 @@
             f_x += FORCE_AMT;
     });
     document.addEventListener('keyup', function (e) {
-        keydown[e.keyCode] = false;
-        if (paused)
+        if (paused || ! keydown[e.keyCode])
             return;
+        keydown[e.keyCode] = false;
         if (e.keyCode == 38)
             f_y -= FORCE_AMT;
         if (e.keyCode == 40)
@@ -361,6 +361,7 @@
         if (paused) {
             drawScreen();
             makeOverlay();
+            keydown = [];
 
             if (gameover) {
                 makeText(500, 350, "Game Over! \n Press F5 to Restart", "bold 50px Arial", "#000");
