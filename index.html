@@ -223,7 +223,7 @@
             var a = adityas[i];
             makeCircle(a.x, 800 - a.y, a.r, "#000", "#000", 5);
 
-            let bm = new createjs.Bitmap("adicha.png");
+            var bm = new createjs.Bitmap("adicha.png");
             bm.alpha = 0.8;
             bm.x = a.x - a.r;
             bm.y = 800 - a.y - a.r;
@@ -303,12 +303,13 @@
         var numadityas = level / 3;
         adityas = [];
         for (var i = 0; i < numadityas; i++) {
-            let ax, ay, ar;
+            var ax, ay, ar;
             do {
                 ax = Math.random() * 1000;
                 ay = Math.random() * 800;
                 ar = 20;
-            } while (Math.pow(x - ax, 2) + Math.pow(y - ay, 2) + 10 < Math.pow(ar + r, 2));
+            } while (Math.pow(x - ax, 2) + Math.pow(y - ay, 2) + 10 < Math.pow(ar + r, 2) ||
+            ((Math.abs(x - ax) < ar + r + 10 && y - ay < 250)));
             adityas.push({x: ax, y: ay, r: ar});
         }
 
@@ -316,11 +317,13 @@
     }
 
     document.addEventListener('keypress', function (e) {
-        if (e.keyCode == 32) {
+        console.log(e);
+        if (e.keyCode == 32 || e.key == " " || e.charCode == 32) {
             if (gameover)
                 return;
             paused = !paused;
             started = true;
+
             if (levelingup)
                 levelstart();
         }
@@ -332,26 +335,26 @@
         if (paused || gameover || levelingup)
             return;
         keydown[e.keyCode] = true;
-        if (e.keyCode == 38)
+        if (e.keyCode == 38 || e.charCode == 38 || e.key == "ArrowUp")
             f_y += FORCE_AMT;
-        if (e.keyCode == 40)
+        if (e.keyCode == 40 || e.charCode == 40 || e.key == "ArrowDown")
             f_y -= FORCE_AMT;
-        if (e.keyCode == 37)
+        if (e.keyCode == 37 || e.charCode == 37 || e.key == "ArrowLeft")
             f_x -= FORCE_AMT;
-        if (e.keyCode == 39)
+        if (e.keyCode == 39 || e.charCode == 39 || e.key == "ArrowRight")
             f_x += FORCE_AMT;
     });
     document.addEventListener('keyup', function (e) {
-        if (paused || ! keydown[e.keyCode])
+        if (paused || !keydown[e.keyCode])
             return;
         keydown[e.keyCode] = false;
-        if (e.keyCode == 38)
+        if (e.keyCode == 38 || e.charCode == 38 || e.key == "ArrowUp")
             f_y -= FORCE_AMT;
-        if (e.keyCode == 40)
+        if (e.keyCode == 40 || e.charCode == 40 || e.key == "ArrowDown")
             f_y += FORCE_AMT;
-        if (e.keyCode == 37)
+        if (e.keyCode == 37 || e.charCode == 37 || e.key == "ArrowLeft")
             f_x += FORCE_AMT;
-        if (e.keyCode == 39)
+        if (e.keyCode == 39 || e.charCode == 39 || e.key == "ArrowRight")
             f_x -= FORCE_AMT;
     });
     createjs.Ticker.setFPS(120);
@@ -445,7 +448,7 @@
         }
         // if in aditya, light up aditya, display game over screen, reset
 
-    }).setFPS(60);
+    });
 </script>
 </body>
 </html>
